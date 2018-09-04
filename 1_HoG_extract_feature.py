@@ -10,7 +10,7 @@ from skimage.feature import hog
 from sklearn.externals import joblib  
 import xml.dom.minidom as xdm  
 import numpy as np  
-import Image  
+import PIL.Image as Image  
 import cv2  
 import os  
 import time  
@@ -28,7 +28,9 @@ train_xml_filePath = r'./train/Annotation'
   
   
 def getBox(childDir):  
-    f_xml = os.path.join(train_xml_filePath, '%s.xml' %childDir.split('.')[0]) # organise path  
+    f_xml = os.path.join(train_xml_filePath, '%s.xml' %childDir.split('.')[0]) # organise path 
+    if not os.path.exists(f_xml):
+        return None
     xml = xdm.parse(f_xml) # load xml file  
     filename = xml.getElementsByTagName('filename')   
     filename = filename[0].firstChild.data.encode("utf-8") # read file name  
@@ -49,9 +51,12 @@ def getDataWithCrop(filePath,label):
     for childDir in os.listdir(filePath):  
         f_im = os.path.join(filePath, childDir)  
         image = Image.open(f_im) # open the image  
-        box = getBox(childDir)  
-        region = image.crop(box) # cut off image
-        data = np.asarray(region) # put the data of image into an N-dinimeter array  
+        box = getBox(childDir)
+        if box != None:
+            region = image.crop(box) # cut off image
+            data = np.asarray(region) # put the data of image into an N-dinimeter array
+        else:
+            data = np.asarray(image)
         data = cv2.resize(data,(200,200),interpolation=cv2.INTER_CUBIC) # resize image  
         data = np.reshape(data, (200*200,3))   
         data.shape = 1,3,-1  
@@ -69,8 +74,8 @@ def getData(filePath,label): # get the full image without cutting
         f = os.path.join(filePath, childDir)  
         data = cv2.imread(f)  
         data = cv2.resize(data,(200,200),interpolation=cv2.INTER_CUBIC)  
-        data = np.reshape(data, (200 * 200,3))  
-        data.shape = 1,3,-1  
+        data = np.reshape(data, (200 * 200,3))  #转换为 (40000, 3)
+        data.shape = 1,3,-1   #转换为(1,3,40000)
         fileName = np.array([[childDir]])  
         datalebels = zip(data, label, fileName)  
         Data.extend(datalebels)  
